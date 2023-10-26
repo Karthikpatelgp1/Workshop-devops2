@@ -1,16 +1,15 @@
 provider "aws" {
-   region = "us-east-1"  
+  region = "ap-south-1"
 }
 
 resource "aws_instance" "demo-server" {
-  ami = "ami-053b0d53c279acc90"
+  ami           = "ami-0287a05f0ef0e9d9a"
   instance_type = "t2.micro"
-  key_name = "linux-KP"
+  key_name      = "CI-CD"
   //security_groups = ["demo-sg"]
   vpc_security_group_ids = [aws_security_group.demo-sg.id]
-  subnet_id = aws_subnet.Nam-public-subnet-01.id
-
-  for_each = toset(["jenkins-master", "jenikns-slave", "ansible"])
+  subnet_id              = aws_subnet.Nam-public-subnet-01.id
+  for_each               = toset(["jenkins-master", "jenkins-slave", "Ansible"])
   tags = {
     Name = "${each.key}"
   }
@@ -20,23 +19,23 @@ resource "aws_instance" "demo-server" {
 resource "aws_security_group" "demo-sg" {
   name        = "demo-sg"
   description = "SSH Access"
-  vpc_id = aws_vpc.Nam-vpc.id
-  
-  ingress {
-    description      = "SSH access"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    }
+  vpc_id      = aws_vpc.Nam-vpc.id
 
   ingress {
-    description      = "Jenkins-port"
-    from_port        = 8080
-    to_port          = 8080
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    }
+    description = "SSH access"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Jenkins-port"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   egress {
     from_port        = 0
@@ -57,62 +56,62 @@ resource "aws_vpc" "Nam-vpc" {
   tags = {
     Name = "Nam-vpc"
   }
-  
+
 }
 
 resource "aws_subnet" "Nam-public-subnet-01" {
-  vpc_id = aws_vpc.Nam-vpc.id
-  cidr_block = "10.1.1.0/24"
+  vpc_id                  = aws_vpc.Nam-vpc.id
+  cidr_block              = "10.1.1.0/24"
   map_public_ip_on_launch = "true"
-  availability_zone = "us-east-1a"
+  availability_zone       = "ap-south-1a"
   tags = {
-    Name = "Nam-public-subent-01"
+    Name = "Nam-public-subent-01a"
   }
 }
 
 resource "aws_subnet" "Nam-public-subnet-02" {
-  vpc_id = aws_vpc.Nam-vpc.id
-  cidr_block = "10.1.2.0/24"
+  vpc_id                  = aws_vpc.Nam-vpc.id
+  cidr_block              = "10.1.2.0/24"
   map_public_ip_on_launch = "true"
-  availability_zone = "us-east-1b"
+  availability_zone       = "ap-south-1b"
   tags = {
     Name = "Nam-public-subent-02"
   }
 }
 
 resource "aws_internet_gateway" "Nam-igw" {
-  vpc_id = aws_vpc.Nam-vpc.id 
+  vpc_id = aws_vpc.Nam-vpc.id
   tags = {
     Name = "Nam-igw"
-  } 
+  }
 }
 
 resource "aws_route_table" "Nam-public-rt" {
-  vpc_id = aws_vpc.Nam-vpc.id 
+  vpc_id = aws_vpc.Nam-vpc.id
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.Nam-igw.id 
+    gateway_id = aws_internet_gateway.Nam-igw.id
   }
 }
 
 resource "aws_route_table_association" "Nam-rta-public-subnet-01" {
-  subnet_id = aws_subnet.Nam-public-subnet-01.id
-  route_table_id = aws_route_table.Nam-public-rt.id   
+  subnet_id      = aws_subnet.Nam-public-subnet-01.id
+  route_table_id = aws_route_table.Nam-public-rt.id
 }
 
 resource "aws_route_table_association" "Nam-rta-public-subnet-02" {
-  subnet_id = aws_subnet.Nam-public-subnet-02.id 
-  route_table_id = aws_route_table.Nam-public-rt.id   
+  subnet_id      = aws_subnet.Nam-public-subnet-02.id
+  route_table_id = aws_route_table.Nam-public-rt.id
 }
 
 module "sgs" {
-    source = "../sg_eks"
-    vpc_id     =     aws_vpc.Nam-vpc.id
+  source = "../sg_eks"
+  vpc_id = aws_vpc.Nam-vpc.id
 }
 
 module "eks" {
-    source = "../eks"
-    vpc_id     =     aws_vpc.Nam-vpc.id
-    subnet_ids = [aws_subnet.Nam-public-subnet-01.id,aws_subnet.Nam-public-subnet-02.id]
-    sg_ids = module.sgs.security_group_public
+  source     = "../eks"
+  vpc_id     = aws_vpc.Nam-vpc.id
+  subnet_ids = [aws_subnet.Nam-public-subnet-01.id, aws_subnet.Nam-public-subnet-02.id]
+  sg_ids     = module.sgs.security_group_public
 }
